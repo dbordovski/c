@@ -1,0 +1,23 @@
+#include <windows.h>
+#include <stdio.h>
+#include <iostream>
+using namespace std;
+
+int main(void)
+{
+	system("cls");
+	int i1 = GetConsoleCP();
+	SetConsoleCP(1251);
+	SetConsoleOutputCP(1251);
+
+	cout << "Какую сумму Белорусских рублей Вы хотите перевести?\n";
+	double i;
+	cin >> i;
+	cout << "Сумма в долларах составит:" << (i/2.5211) << "\n";
+	cout << "Сумма в евро составит:" << (i/2.8431) << "\n";
+	cout << "Сумма в Российских рублях составит:" << (i/(3.4255/100)) << "\n";
+	SetConsoleCP(i1);
+	SetConsoleOutputCP(i1);
+
+	return 0;
+}
