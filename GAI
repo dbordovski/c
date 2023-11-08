@@ -1,0 +1,324 @@
+//#define _CRT_SECURE_NO_WARNINGS
+#define buff_s 256
+#include <iostream>
+#include <Windows.h>
+using namespace std;
+
+// Реализовать базу данных ГАИ по штрафным квитанциям с помощью бинарного дерева. Ключом будет служить номер автомашины, значением узла –
+// список правонарушений. Если квитанция добавляется в первый раз, то в дереве появляется новый узел, а в списке - данные по правонарушению; если нет, то данные заносятся в существующий список.
+// Необходимо также реализовать следующие операции:
+// - Полная распечатка базы данных(по номерам машин и списку правонарушений, числящихся за ними).
+// - Распечатка данных по заданному номеру.
+
+struct list {
+ char violation[buff_s];
+ list* next;
+};
+
+struct Elem {
+ char number[buff_s];
+ Elem* left, * right, * parent;
+ list* head;
+ Elem();
+};
+
+class Tree {
+ Elem* root;
+public:
+ Tree();
+ ~Tree();
+ Elem* Search(Elem*, char*);
+ Elem* Min(Elem*);
+ Elem* Max(Elem*);
+ Elem* Next(Elem*);
+ Elem* Previous(Elem*);
+ void Insert(char*, char*);
+ void Del(Elem* = 0);
+ bool Del(Elem*, int);
+ Elem* GetRoot();
+};
+
+void PrintAll(Elem*);
+void PrintN(Tree*, char*);
+
+bool menu(Tree* tree) {
+ char number[buff_s], violation[buff_s], ch;
+
+ cout << "a) Добавить нарушение\n"
+  << "b) Просмотр базы\n"
+  << "c) Просмотр нарушений по номеру\n"
+  << "d) Удалить номер\n"
+  << "e) Удалить нарушение\n"
+  << "x) Выход\n\n";
+
+ do {
+  cout << "Выбор: ";
+  cin >> ch;
+  while (cin.get() != '\n');
+ } while ((ch < 'a' || ch > 'e') && ch != 'x');
+
+ cout << endl;
+
+ switch (ch) {
+ case 'a': {
+  cout << "Номер автомобиля: ";
+  gets_s(number, buff_s);
+  cout << "Нарушение: ";
+  gets_s(violation, buff_s);
+  tree->Insert(number, violation);
+  cout << "Готово!\n";
+  break;
+ }
+ case 'b': {
+  PrintAll(tree->GetRoot());
+  break;
+ }
+ case 'c': {
+  cout << "Номер автомобиля: ";
+  gets_s(number, buff_s);
+  cout << endl;
+  PrintN(tree, number);
+  break;
+ }
+ case 'd': {
+  cout << "Номер автомобиля: ";
+  gets_s(number, buff_s);
+  Elem* find = tree->Search(tree->GetRoot(), number);
+  if (find) {
+   tree->Del(find);
+   cout << "Номер " << number << " удален\n";
+  }
+  else
+   cout << "Номер " << number << " не найден\n";
+  break;
+ }
+ case 'e': {
+  cout << "Номер автомобиля: ";
+  gets_s(number, buff_s);
+  Elem* find = tree->Search(tree->GetRoot(), number);
+  if (find) {
+   int n;
+   do {
+    cout << "Нарушение (номер по списку): ";
+    cin >> n;
+   } while (n < 1);
+   if (tree->Del(find, n))
+    cout << "Такого нарушения нет\n";
+   else
+    cout << "Удалено!\n";
+  }
+  else
+   cout << "Номер " << number << " не найден\n";
+  break;
+ }
+ case 'x': return 0;
+ }
+
+ cout << endl;
+ return 1;
+}
+
+int main()
+{
+ system("cls");
+ SetConsoleCP(1251);
+ SetConsoleOutputCP(1251);
+
+ Tree tree;
+ while (menu(&tree) != 0);
+}
+
+Elem::Elem() : head(NULL) {
+}
+
+Tree::Tree() : root(NULL) {
+}
+
+Tree::~Tree() {
+ Del();
+}
+
+Elem* Tree::Search(Elem* Node, char* k) {
+ while (Node != 0 && strcmp(k, Node->number) != 0) {
+  if (strcmp(k, Node->number) < 0)
+   Node = Node->left;
+  else
+   Node = Node->right;
+ }
+ return Node;
+}
+
+Elem* Tree::Min(Elem* Node) {
+ if (Node != 0)
+  while (Node->left != 0)
+   Node = Node->left;
+ return Node;
+}
+
+Elem* Tree::Max(Elem* Node) {
+ if (Node != 0)
+  while (Node->right != 0)
+   Node = Node->right;
+ return Node;
+}
+
+Elem* Tree::Next(Elem* Node) {
+ Elem* y = 0;
+ if (Node != 0) {
+  if (Node->right != 0)
+   return Min(Node->right);
+  y = Node->parent;
+  while (y != 0 && Node == y->right) {
+   Node = y;
+   y = y->parent;
+  }
+ }
+ return y;
+}
+
+Elem* Tree::Previous(Elem* Node) {
+ Elem* y = 0;
+ if (Node != 0) {
+  if (Node->left != 0)
+   return Max(Node->left);
+  y = Node->parent;
+  while (y != 0 && Node == y->left) {
+   Node = y;
+   y = y->parent;
+  }
+ }
+ return y;
+}
+
+Elem* Tree::GetRoot() {
+ return root;
+}
+
+void Tree::Insert(char* number, char* violation) {
+
+ Elem* elem = Search(GetRoot(), number);
+ list* new_head = new list;
+
+ if (elem) {
+  strcpy_s(new_head->violation, buff_s, violation);
+  new_head->next = elem->head;
+  elem->head = new_head;
+  return;
+ }
+
+ elem = new Elem;
+ strcpy_s(elem->number, buff_s, number);
+ strcpy_s(new_head->violation, buff_s, violation);
+ new_head->next = elem->head;
+ elem->head = new_head;
+
+ elem->left = NULL;
+ elem->right = NULL;
+ Elem* y = NULL;
+ Elem* Node = root;
+ while (Node != 0) {
+  y = Node;
+  if (strcmp(elem->number, Node->number) < 0)
+   Node = Node->left;
+  else
+   Node = Node->right;
+ }
+ elem->parent = y;
+ if (y == 0)
+  root = elem;
+ else if (strcmp(elem->number, y->number) < 0)
+  y->left = elem;
+ else
+  y->right = elem;
+}
+
+void Tree::Del(Elem* z) {
+ if (z != 0) {
+  Elem* Node, * y;
+  if (z->left == 0 || z->right == 0)
+   y = z;
+  else
+   y = Next(z);
+  if (y->left != 0)
+   Node = y->left;
+  else
+   Node = y->right;
+  if (Node != 0)
+   Node->parent = y->parent;
+  if (y->parent == 0)
+   root = Node;
+  else if (y == y->parent->left)
+   y->parent->left = Node;
+  else
+   y->parent->right = Node;
+  if (y != z)
+   strcpy(z->number, y->number);
+
+  while (z->head != NULL) {
+   list* tmp = z->head;
+   z->head = z->head->next;
+   delete tmp;
+  }
+
+  delete y;
+ }
+ else {
+  while (root != 0)
+   Del(root);
+ }
+}
+
+bool Tree::Del(Elem* z, int n) {
+ if (z->head == NULL)
+  return 1;
+ list* tmp;
+ if (n == 1) {
+  tmp = z->head;
+  z->head = z->head->next;
+ }
+ else {
+  list* f = z->head;
+  for (int i = 1; i < n - 1; i++) {
+   f = f->next;
+   if (f->next == NULL)
+    return 1;
+  }
+  tmp = f->next;
+  f->next = f->next->next;
+ }
+ delete tmp;
+ return 0;
+}
+
+void PrintAll(Elem* Node) {
+ if (Node != 0) {
+  PrintAll(Node->left);
+  cout << "Список нарушений для номера: " << Node->number << endl;
+  list* tmp = Node->head;
+  if (tmp != NULL) {
+   for (unsigned i = 0; tmp != NULL; i++) {
+    cout << " " << i + 1 << ") " << tmp->violation << endl;
+    tmp = tmp->next;
+   }
+  }
+  else
+   cout << "Нет нарушений!\n";
+  PrintAll(Node->right);
+ }
+}
+
+void PrintN(Tree* tree, char* number) {
+ Elem* find = tree->Search(tree->GetRoot(), number);
+ if (find) {
+  list* tmp = find->head;
+  cout << "Список нарушений для номера: " << number << endl;
+  if (tmp != NULL) {
+   for (unsigned i = 0; tmp != NULL; i++) {
+    cout << " " << i + 1 << ") " << tmp->violation << endl;
+    tmp = tmp->next;
+   }
+  }
+ }
+ else
+  cout << "Нарушений по номеру " << number << " не найдено\n";
+}
